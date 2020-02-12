@@ -2,7 +2,7 @@
 
 
 * Compare Purism laptop (AES-NI) to Dell laptop (VAES-NI)
-* Iteratively progress through different variantes of AES
+* Iteratively progress through different variants of AES
 * For each mode compare both AES-128 and AES-256
 * Test both CTR and CBC mode to see how many registers are used
 * Add all results to google sheets tracker
@@ -28,24 +28,26 @@ This test the standards implementation of AES using OpenSSL, which will use AES-
 
 2. Rust AES crate at 1x and 8x blocks
 
-This is a pure rust implemenation of AES that also uses AES-NI by default. It can run in single block per instruction or eight blocks per instruction mode.
+This is a pure rust implementation of AES that also uses AES-NI by default. It can run in single block per instruction or eight blocks per instruction mode.
 
 ```
-    cargo run aes --release
+    git clone https://github.com/RustCrypto/block-ciphers.git
+    cd block-ciphers
+    cargo bench
 ```
 
 3. Rust crypto-primitives 
 
-This is rust bindings to C code that can take advantage of AVX-512 regiester and VAES instructions. 
+This is rust bindings to C code that can take advantage of AVX-512 registers and VAES instructions.
+Ensure gcc or clang are updated to latest version, else it will not build!
+If you don't have Ice Lake architecture only the first half of benchmarks will run.
 
 ```
-    cargo run vaes --release
+    git clone https://github.com/elalfer/rust-crypto-pimitives.git
+    cd rust-crypto-pimitives
+    cargo bench
 ```
 
 4. Variable block width branch
 
-This is a custom implemenation that can be configured for any number of registers to be used per instruction. Though it may not take advantage of VAES instructions, need to check.
-
-```
-    cargo run variable --release
-```
+This is a custom implementation that can be configured for any number of registers to be used per instruction. Though it may not take advantage of VAES instructions, need to check.
