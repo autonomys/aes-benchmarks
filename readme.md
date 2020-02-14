@@ -48,6 +48,23 @@ If you don't have Ice Lake architecture only the first half of benchmarks will r
     cargo bench
 ```
 
-4. Variable block width branch
+4. Optimized Implementation
 
-This is a custom implementation that can be configured for any number of registers to be used per instruction. Though it may not take advantage of VAES instructions, need to check.
+Overview
+
+1. Start with single round encode / decode
+2. Attempt optimized throughput encode / decode on XMM (15)
+3. Iterate on the number of rounds
+4. Add in a block cipher
+5. Implement parallel decryption
+6. Implement the opposite for attacker
+
+Use Nazar's variable block width code as a guide.
+Start with a simple function
+  * bring in the right libraries
+  * set the compile instructions correctly
+  * given a 16 byte key and 16 byte plaintext block
+  * compute one round of rijndael using AES-NI
+  * return the ciphertext
+  * compute the inverse
+  * verify they match
