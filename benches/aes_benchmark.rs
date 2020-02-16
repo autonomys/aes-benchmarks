@@ -4,22 +4,38 @@ use aes_benchmarks::*;
 pub fn criterion_benchmark(c: &mut Criterion) {
 
     let key = random_bytes_16();
-    let plaintext = random_bytes_16();
-    let ciphertext = unsafe { encode(key, plaintext, 1000) }; 
+    let plaintexts = [
+      random_bytes_16(),
+      random_bytes_16(),
+      random_bytes_16(),
+      random_bytes_16(),
+      random_bytes_16(),
+      random_bytes_16(),
+      random_bytes_16(),
+      random_bytes_16(),
+    ];
+    let ciphertext = unsafe { encode(key, plaintexts[0], 10000000) }; 
 
     let mut group = c.benchmark_group("aes-ni-simple");
 
     group.bench_function(
       "encode", 
       |b| b.iter(
-        || unsafe { encode(key, plaintext, 1000) }
+        || unsafe { encode(key, plaintexts[0], 10000000) }
       )
     );
 
+    // group.bench_function(
+    //   "decode", 
+    //   |b| b.iter(
+    //     || unsafe { decode(key, ciphertext, 100000) }
+    //   )
+    // );
+
     group.bench_function(
-      "decode", 
+      "encode-pipelined", 
       |b| b.iter(
-        || unsafe { decode(ciphertext, plaintext, 1000) }
+        || unsafe { encode_pipelined(key, plaintexts, 10000000) }
       )
     );
 

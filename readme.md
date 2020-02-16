@@ -68,3 +68,40 @@ Start with a simple function
   * return the ciphertext
   * compute the inverse
   * verify they match
+
+
+## Use of AES Instruction Set
+
+### Constraints
+
+1. Number of registers (16 or 32)
+2. Width of registers (16, 32, or 64 bytes)
+3. Instructions (AES, VAES)
+4. Latency of Instructions (for pipelining)
+
+## Implementations
+
+1. Traditional AES-256-CBC encoding with constant keys
+2. Subspace Optimized AES-256 encoding
+3. Optimize pipelining to improve effective throughput (4, 5, 6x ???)
+4. Widen registers for VAES/AVX-512
+5. How to take advantage of AMD Zen?
+6. Introduce concurrency with multiple cores
+7. Write optimized CBC decoding function (why 8x speedup before?)
+8. Write batched encoder to test sustained effective plotting throughput and bench
+9.  Rewrite encoder as the parallel attacker (invert)
+10. Benchmark the fast attacker (how fast can he extend a private chain)
+11. Benchmark the slow attacker with VAES/AVX-512 (how much advantage can he gain?)
+
+## Key Questions
+
+1. Confirm that pipelining actually works the way you expect -- simple to test
+2. Why do we then see a higher speed on decryption with decode eight? -- You don't!
+3. How do you take advantage of AMD Zen 2x AES-NI? -- not clear at all
+4. How do you actually employ VAES w/ZMM -- we can test this
+
+
+## Design
+
+1. Optimal plotting algo (mainly key schedule)
+2. Optimal attacker algo
