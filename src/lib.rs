@@ -1,3 +1,4 @@
+#![allow(dead_code)]
 use core::arch::x86_64::*;
 use rand::Rng;
 
@@ -24,6 +25,40 @@ pub unsafe fn encode(
   
   // encode final round
   pt_register = _mm_aesenclast_si128(pt_register, key_register);
+  
+  // init memory for ciphertext
+  let mut ciphertext = [0u8; 16];
+
+  // store ciphertext back into memory and return
+  _mm_storeu_si128(ciphertext.as_mut_ptr() as *mut __m128i, pt_register);
+
+  // return ciphertext
+  ciphertext
+}
+
+#[inline(always)]
+pub unsafe fn encode_memory(
+  key: [u8; 16], 
+  plaintext: [u8; 16],
+  rounds: usize,
+) -> [u8; 16] {
+
+  // load plaintext data from memory into a single xmm register
+  let mut pt_register = _mm_loadu_si128(plaintext.as_ptr() as *const __m128i);
+  
+  // load key from memory into a single xmm register
+  let key_memory = key.as_ptr() as *const __m128i;
+
+  // xor the input with key
+  pt_register = _mm_xor_si128(pt_register, *key_memory);
+
+  // call r-1  round of Rijndael using AES-NI with same key for now
+  for _ in 1..rounds {
+    pt_register = _mm_aesenc_si128(pt_register, *key_memory);
+  }
+  
+  // encode final round
+  pt_register = _mm_aesenclast_si128(pt_register, *key_memory);
   
   // init memory for ciphertext
   let mut ciphertext = [0u8; 16];
@@ -240,6 +275,9 @@ pub unsafe fn encode_pipelined(
     // ciphertext_7,
   ]
 }
+
+#[inline(always)]
+
 
 #[inline(always)]
 pub unsafe fn encode_pipelined_with_keys(
