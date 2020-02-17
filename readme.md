@@ -95,13 +95,24 @@ Start with a simple function
 
 ## Key Questions
 
-1. Confirm that pipelining actually works the way you expect -- simple to test
+1. Confirm that pipelining actually works the way you expect -- it does!
+   1. Confirm it works the same on Ice Lake and Purism machines
 2. Why do we then see a higher speed on decryption with decode eight? -- You don't!
 3. How do you take advantage of AMD Zen 2x AES-NI? -- not clear at all
 4. How do you actually employ VAES w/ZMM -- we can test this
+   1. Write same code for VAES
+   2. Extend to handle several pieces in parallel 
 
 
 ## Design
 
 1. Optimal plotting algo (mainly key schedule)
 2. Optimal attacker algo
+
+
+## Testing Results
+
+1. SW Only -- what is the best implementation (ignoring cache timing attacks)
+2. AES-NI -- what is the best pipelining achievable? 4x at 1/4 SW only speed
+3. VAES -- what is the best vectorization achievable? AES NI + 4x at 1/4 SW only speed
+4. GPU -- what is the best parallelism achievable? 4000x at 4x SW only speed
