@@ -28,6 +28,78 @@ pub fn criterion_benchmark(c: &mut Criterion) {
       random_bytes_16(),
       random_bytes_16(),
       random_bytes_16(),
+      random_bytes_16(),
+      random_bytes_16(),
+      random_bytes_16(),
+      random_bytes_16(),
+      random_bytes_16(),
+      random_bytes_16(),
+      random_bytes_16(),
+      random_bytes_16(),
+      random_bytes_16(),
+      random_bytes_16(),
+      random_bytes_16(),
+      random_bytes_16(),
+      random_bytes_16(),
+      random_bytes_16(),
+      random_bytes_16(),
+      random_bytes_16(),
+      random_bytes_16(),
+      random_bytes_16(),
+      random_bytes_16(),
+      random_bytes_16(),
+      random_bytes_16(),
+      random_bytes_16(),
+      random_bytes_16(),
+      random_bytes_16(),
+      random_bytes_16(),
+      random_bytes_16(),
+      random_bytes_16(),
+      random_bytes_16(),
+      random_bytes_16(),
+      random_bytes_16(),
+      random_bytes_16(),
+      random_bytes_16(),
+      random_bytes_16(),
+      random_bytes_16(),
+      random_bytes_16(),
+      random_bytes_16(),
+      random_bytes_16(),
+      random_bytes_16(),
+      random_bytes_16(),
+      random_bytes_16(),
+      random_bytes_16(),
+      random_bytes_16(),
+      random_bytes_16(),
+      random_bytes_16(),
+      random_bytes_16(),
+      random_bytes_16(),
+      random_bytes_16(),
+      random_bytes_16(),
+      random_bytes_16(),
+      random_bytes_16(),
+      random_bytes_16(),
+      random_bytes_16(),
+      random_bytes_16(),
+      random_bytes_16(),
+      random_bytes_16(),
+      random_bytes_16(),
+      random_bytes_16(),
+      random_bytes_16(),
+      random_bytes_16(),
+      random_bytes_16(),
+      random_bytes_16(),
+      random_bytes_16(),
+      random_bytes_16(),
+      random_bytes_16(),
+      random_bytes_16(),
+      random_bytes_16(),
+      random_bytes_16(),
+      random_bytes_16(),
+      random_bytes_16(),
+      random_bytes_16(),
+      random_bytes_16(),
+      random_bytes_16(),
     ];
 
     let plaintexts = [
@@ -67,6 +139,13 @@ pub fn criterion_benchmark(c: &mut Criterion) {
     );
 
     group.bench_function(
+      "encode-with-keys-memory", 
+      |b| b.iter(
+        || unsafe { encode_with_keys_memory(keys, plaintexts[0], 66000) }
+      )
+    );
+
+    group.bench_function(
       "decode", 
       |b| b.iter(
         || unsafe { decode(keys[0], ciphertext, 66000) }
@@ -84,6 +163,20 @@ pub fn criterion_benchmark(c: &mut Criterion) {
       "encode-pipelined-with-keys", 
       |b| b.iter(
         || unsafe { encode_pipelined_with_keys(keys, plaintexts, 66000) }
+      )
+    );
+
+    group.bench_function(
+      "encode-pipelined-with-keys-memory", 
+      |b| b.iter(
+        || unsafe { encode_pipelined_with_keys_memory(keys, plaintexts, 66000) }
+      )
+    );
+
+    group.bench_function(
+      "encode-pipelined-with-keys-memory-attacker", 
+      |b| b.iter(
+        || unsafe { encode_pipelined_with_keys_memory_attacker(keys, plaintexts, 66000) }
       )
     );
 

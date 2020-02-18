@@ -116,3 +116,20 @@ Start with a simple function
 2. AES-NI -- what is the best pipelining achievable? 4x at 1/4 SW only speed
 3. VAES -- what is the best vectorization achievable? AES NI + 4x at 1/4 SW only speed
 4. GPU -- what is the best parallelism achievable? 4000x at 4x SW only speed
+
+
+## VAES Commands Needed
+
+```
+VAES
+__mm512i _mm512_aesenc_epi128 (__mm512i a, __mm512i RoundKey)
+__mm512i _mm512_aesenclast_epi128 (__mm512i a, __mm512i RoundKey)
+__mm512i _mm512_aesdec_epi128 (__mm512i a, __mm512i RoundKey)
+__mm512i _mm512_aesdeclast_epi128 (__mm512i a, __mm512i RoundKey)
+
+__mm512i _mm512_loadu_si512 (void const* mem_addr)
+__mm512i _mm512_xor_si512(__mm512i a, __mm512i b)
+void _mm512_storeu_si512 (void* mem_addr, __mm512i a)
+
+_
+```
