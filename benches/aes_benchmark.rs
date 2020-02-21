@@ -3,6 +3,8 @@ use aes_benchmarks::*;
 
 pub fn criterion_benchmark(c: &mut Criterion) {
 
+    // generate new keys for each test, the may be retained in RAM
+
     let keys = [
       random_bytes_16(),
       random_bytes_16(),
@@ -113,70 +115,49 @@ pub fn criterion_benchmark(c: &mut Criterion) {
       random_bytes_16(),
     ];
 
-    let ciphertext = unsafe { encode(keys[0], plaintexts[0], 66000) }; 
+    let ciphertext = unsafe { encode(keys[0], plaintexts[0], 660000) }; 
 
     let mut group = c.benchmark_group("aes-ni-simple");
 
     group.bench_function(
       "encode", 
       |b| b.iter(
-        || unsafe { encode(keys[0], plaintexts[0], 66000) }
-      )
-    );
-
-    group.bench_function(
-      "encode-memory", 
-      |b| b.iter(
-        || unsafe { encode_memory(keys[0], plaintexts[0], 66000) }
-      )
-    );
-
-    group.bench_function(
-      "encode-with-keys", 
-      |b| b.iter(
-        || unsafe { encode_with_keys(keys, plaintexts[0], 66000) }
-      )
-    );
-
-    group.bench_function(
-      "encode-with-keys-memory", 
-      |b| b.iter(
-        || unsafe { encode_with_keys_memory(keys, plaintexts[0], 66000) }
+        || unsafe { encode(keys[0], plaintexts[0], 660000) }
       )
     );
 
     group.bench_function(
       "decode", 
       |b| b.iter(
-        || unsafe { decode(keys[0], ciphertext, 66000) }
+        || unsafe { decode(keys[0], ciphertext, 660000) }
       )
     );
 
     group.bench_function(
       "encode-pipelined", 
       |b| b.iter(
-        || unsafe { encode_pipelined(keys[0], plaintexts, 66000) }
+        || unsafe { encode_pipelined(keys[0], plaintexts, 660000) }
+      )
+    );
+
+    group.bench_function(
+      "encode-with-keys", 
+      |b| b.iter(
+        || unsafe { encode_with_keys(keys, plaintexts[0], 660000) }
       )
     );
 
     group.bench_function(
       "encode-pipelined-with-keys", 
       |b| b.iter(
-        || unsafe { encode_pipelined_with_keys(keys, plaintexts, 66000) }
+        || unsafe { encode_pipelined_with_keys(keys, plaintexts, 660000) }
       )
     );
 
     group.bench_function(
-      "encode-pipelined-with-keys-memory", 
+      "encode-pipelined-with-keys-attacker", 
       |b| b.iter(
-        || unsafe { encode_pipelined_with_keys_memory(keys, plaintexts, 66000) }
-      )
-    );
-
-    group.bench_function(
-      "encode-pipelined-with-keys-memory-attacker", 
-      |b| b.iter(
-        || unsafe { encode_pipelined_with_keys_memory_attacker(keys, plaintexts, 66000) }
+        || unsafe { encode_pipelined_with_keys_attacker(keys, plaintexts, 660000) }
       )
     );
 

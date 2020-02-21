@@ -1,29 +1,23 @@
 ##  AES Speed Benchmarks
 
-
-* Compare Purism laptop (AES-NI) to Dell laptop (VAES-NI)
-* Iteratively progress through different variants of AES
-* For each mode compare both AES-128 and AES-256
-* Test both CTR and CBC mode to see how many registers are used
-* Add all results to google sheets tracker
-* Need to setup debugger so that you can inspect the memory (if not expected)
+A collection of scripts, libraries, and notes on the performance across different AES / AES-NI / VAES implementations for different platforms, in order to correctly model the degree and speed of parallelism that an attacker can obtain for a given system.
 
 1. OpenSSL
 
 This test the standards implementation of AES using OpenSSL, which will use AES-NI by default. This will be limited to 16x XMM registers at 16 bytes each, though only one register will used in CBC mode. AES-NI can be manually disabled to see the pure software speed.
 
 ```
-    # AES-128-CBC with AES-NI disabled
-    OPENSSL_ia32cap="~0x200000200000000" openssl speed -elapsed -evp aes-128-cbc
+  # AES-128-CBC with AES-NI disabled
+  OPENSSL_ia32cap="~0x200000200000000" openssl speed -elapsed -evp aes-128-cbc
 
-    # AES-128-CBC with AES-NI enabled
-	openssl speed -elapsed -evp aes-128-cbc
+  # AES-128-CBC with AES-NI enabled
+  openssl speed -elapsed -evp aes-128-cbc
 
-    # AES-256-CBC with AES-NI disabled
-    OPENSSL_ia32cap="~0x200000200000000" openssl speed -elapsed -evp aes-256-cbc
+  # AES-256-CBC with AES-NI disabled
+  OPENSSL_ia32cap="~0x200000200000000" openssl speed -elapsed -evp aes-256-cbc
 
-    # AES-256-CBC with AES-NI enabled
-	openssl speed -elapsed -evp aes-256-cbc
+  # AES-256-CBC with AES-NI enabled
+  openssl speed -elapsed -evp aes-256-cbc
 ```
 
 2. Rust AES crate at 1x and 8x blocks
@@ -48,7 +42,25 @@ If you don't have Ice Lake architecture only the first half of benchmarks will r
     cargo bench
 ```
 
-4. Optimized Implementation
+4. Optimized Implementation (This library)
+
+Install and run benchmarks, all should run in roughly the same time (with no background processes) w/in < 1% variance.
+
+```
+    git clone https://github.com/subspace/aes-benchmarks.git
+    cd aes-benchmarks
+    cargo bench
+```
+
+* Encode single block with single key for R rounds storing key in register
+* Encode single block with single key for R rounds storing key in memory
+* Encode four blocks with single key for R rounds using a four stage pipeline storing keys in register
+* Encode four blocks with single key for R rounds using a four stage pipeline storing keys in memory
+* Encode single block with 24 keys for R/22 rounds (constant iterations) storing keys in registers
+* Encode single block with 24 keys for R/22 rounds (constant iterations) storing keys in memory
+* Encode four blocks in a pipepline with 24 keys for R/22 rounds storking keys in registers
+
+Benchmarks show that all of the above will execute in the same time, showing that 
 
 Overview
 
