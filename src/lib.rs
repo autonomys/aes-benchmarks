@@ -440,10 +440,24 @@ pub unsafe fn decode_aes_ni_c_128(
   output
 }
 
+#[inline(always)]
+pub unsafe fn encode_vaes_ni_c_128(
+  keys: [u8; 176],
+  plaintext: [u8; 64],
+  rounds: usize,
+) -> [u8; 64] {
+  let mut output = [0u8; 64];
+  vaesni_enc_block(plaintext.as_ptr(), keys.as_ptr(), rounds, output.as_mut_ptr());
+  output
+}
+
 // Import C implementations
 #[link(name = "vaes_c.a")]
 extern "C" {
     fn aesni_enc_block(input: *const u8, key: *const u8, rounds: usize, output: *mut u8);
 
     fn aesni_dec_block(input: *const u8, key: *const u8, rounds: usize, output: *mut u8);
+
+    fn vaesni_enc_block(input: *const u8, key: *const u8, rounds: usize, output: *mut u8);
+
 }

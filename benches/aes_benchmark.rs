@@ -136,11 +136,44 @@ pub fn criterion_benchmark(c: &mut Criterion) {
     );
 
     group.bench_function(
+      "encode-aes-ni-x8-direct-single", 
+      |b| b.iter(
+        || unsafe { 
+          black_box(
+            encode_aes_ni_128_pipelined_x8(keys, [
+              inputs[0],
+              inputs[1],
+              inputs[2],
+              inputs[3],
+              inputs[4],
+              inputs[5],
+              inputs[6],
+              inputs[7],
+            ],
+            1,
+          ) 
+        )
+       }
+      )
+    );
+
+    group.bench_function(
       "encode-aes-ni-direct-iterated", 
       |b| b.iter(
         || unsafe { 
           black_box(
             encode_aes_ni_128(keys, inputs[0], 4096)
+          ) 
+        }
+      )
+    );
+
+    group.bench_function(
+      "encode-aes-ni-c-direct-iterated", 
+      |b| b.iter(
+        || unsafe { 
+          black_box(
+            encode_aes_ni_c_128(flat_keys, inputs[0], 4096)
           ) 
         }
       )
@@ -156,6 +189,28 @@ pub fn criterion_benchmark(c: &mut Criterion) {
                 inputs[1],
                 inputs[2],
                 inputs[3],
+              ],
+              rounds,
+            ) 
+          )
+        }
+      )
+    );
+
+    group.bench_function(
+      "encode-aes-ni-x8-direct-iterated", 
+      |b| b.iter(
+        || unsafe { 
+          black_box(
+            encode_aes_ni_128_pipelined_x8(keys, [
+                inputs[0],
+                inputs[1],
+                inputs[2],
+                inputs[3],
+                inputs[4],
+                inputs[5],
+                inputs[6],
+                inputs[7],
               ],
               rounds,
             ) 

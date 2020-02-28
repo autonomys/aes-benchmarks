@@ -1,7 +1,9 @@
 extern crate cc;
 
 fn main() {
-    let mut cfg = cc::Build::new();
-    cfg.file("src/vaes.c");
-    cfg.compile("vaes_c.a");
+    cc::Build::new()
+      .file("src/vaes.c")
+      .opt_level(3)
+      .flag("-flto")
+      .compile("vaes_c.a");
 }
