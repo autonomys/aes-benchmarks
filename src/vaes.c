@@ -113,7 +113,7 @@ void aesni_dec_block(
   _mm_storeu_si128(((__m128i*)output), feedback); 
 }
 
-__attribute__((target("aes, avx512f, vaes")))
+__attribute__((target("aes,avx512f,vaes")))
 void vaesni_enc_block(
   const unsigned char* input,
   const unsigned char* key,  
