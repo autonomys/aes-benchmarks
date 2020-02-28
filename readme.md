@@ -1,6 +1,133 @@
 ##  AES Speed Benchmarks
 
-A collection of scripts, libraries, and notes on the performance across different AES / AES-NI / VAES implementations for different platforms, in order to correctly model the degree and speed of parallelism that an attacker can obtain for a given system.
+A collection of scripts, libraries, and notes on the performance across different AES / AES-NI / VAES / GPU implementations for different platforms, in order to correctly model the degree and speed of parallelism that an attacker can obtain for a given system.
+
+### Machine Setup
+```
+# Install Rust
+$ curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+
+# Configure path
+$ vim ~/.profile
+$ export PATH="$HOME/.cargo/bin:$PATH"
+$ source ~/.profile
+$ source ~/.cargo/env
+
+# Check installed
+$ rustc --version
+
+# Switch to nightly
+$ rustup toolchain install nightly
+$ rustup default nightly
+$ rustc --version
+
+# Install/Update Clang
+
+# Install CUDA
+
+# Install OpenCL
+
+```
+
+### SSH Testing
+
+#### Honest Node
+
+```
+ssh -i keys_rsa -p 22 subspace@subspacelabs.hopto.org
+```
+
+#### Zen2 Grinder Node
+
+```
+ssh -i keys_rsa -p 2222 subspace@subspacelabs.hopto.org
+```
+
+#### GPU Grinder Node
+
+```
+ssh -i keys_rsa -p 12345 ubuntu@176.122.88.128
+```
+
+#### Ice Lake Grinder Node
+
+## Implementations to Test
+
+For each Implementation describe:
+
+* Summary 
+* Minimum Number of Instructions
+* Minimum Number of Cycles
+* CPB by Architecture 
+* Expected latency
+* Expected throughput per core*
+
+### Baseline Implementation in Software
+
+Given 16 bytes of input data, organized into a 4x4 and an expanded encryption key forming R + 1 round keys, each 16 bytes. Iteratively apply R rounds.
+
+Begin by XORing the first round key with the state (whitening).
+
+For r - 1 rounds:
+
+1. Substitute each byte with its corresponding S-Box Look-up-table (LUT) value. 
+2. Shift each row per the cipher.
+3. Mix each column per the cipher
+4. XOR the resulting state with the round key.
+
+For the final round, conduct steps 1, 2, and 4 above (skip mix columns).
+
+Note that S-Box lookups are susceptible to side-channel attacks as they leak timing information that my be used to recover the secret key. As we are using a public encoding key these attacks are irrelevant.  
+
+### T-Tables in Software
+
+Steps 1, 2, and 3 above may be combined to form four 1 kb LUTs or T-Tables for encryption.
+
+Begin by XORing the first round key with the state (whitening).
+
+For r - 1 rounds:
+
+1. For each column (4), for each byte one table lookup for each byte (4), XORing the resulting values together.
+2. XOR the resulting state with the round key.
+
+For the final round we still use the S-Box and Shift Rows from the from the previous implementation, followed by XOR with the final round key.
+
+Note that all 16 Table lookups and all 16 XORs may be conducted in parallel for each round.
+
+Note that T-Table lookups are susceptible to side-channel attacks as they leak timing information that my be used to recover the secret key. As we are using a public encoding key these attacks are irrelevant.
+
+### Bit-slicing in Software
+
+Bit-slicing leverages the SIMD instructions (AVX/2/512) native to modern x86 architectures to provide a performant alternative to LUTs that evaluates in constant time. Instead of operating on individual bytes of state, it operates on the Ith bit of as many different bytes that it can pack into existing XMM/YMM/ZMM SIMD registers as possible, in parallel. The underlying Galois field operations used to derive the S-Boxes and T-Tables are instead applied directly to each group of bits in parallel. 
+
+Bit-slicing summary
+
+Bit-slicing implementation can be faster than LUT given sufficient SIMD registers and the proper instructions, though they are more complex in code to fully utilize available parallelism.
+
+
+### AES-NI w/Pipelining
+
+Beginning with Westmere Architecture (circa 2010) and later with AMD Bulldozer (circa 2011) the steps required to preform one round of AES were implemented as instructions native to the processor that work in concert with the native SIMD architecture. The state and the round keys must be loaded into the native XMM/YMM/ZMM registers before calling the new instructions.
+
+1. Begin by loading the state and all round keys into registers (1 cycle per operation).
+2. XOR the first round key with the state (whitening) using the XOR instruction.
+3. For r - 1 rounds, call the AES_ENC instruction on the state and rth round key.
+4. For the final round, call AES_ENC_LAST on the state and final round key.
+
+
+
+
+On modern architectures (Skylake/Zen), one round of AES encryption can be computed with a latency of four cycles and a throughput of 1 cycle. This allows calls to be pipelined to provide an effective throughput of 4x per core. The state and round keys must be loaded into the 
+
+### VAES-NI w/ Pipelining
+
+### GPU Accelerated T-Tables (CUDA)
+
+### GPU Accelerated Bit-slicing (CUDA)
+
+### GPU Accelerated T-Tables (OpenCL)
+
+### GPU Accelerated Bit-slicing (OpenCL)
 
 1. OpenSSL
 
@@ -58,7 +185,7 @@ Install and run benchmarks, all should run in roughly the same time (with no bac
 * Encode four blocks with single key for R rounds using a four stage pipeline storing keys in memory
 * Encode single block with 24 keys for R/22 rounds (constant iterations) storing keys in registers
 * Encode single block with 24 keys for R/22 rounds (constant iterations) storing keys in memory
-* Encode four blocks in a pipepline with 24 keys for R/22 rounds storking keys in registers
+* Encode four blocks in a pipeline with 24 keys for R/22 rounds storing keys in registers
 
 Benchmarks show that all of the above will execute in the same time, showing that 
 

@@ -1,17 +1,26 @@
 #![allow(dead_code)]
 use core::arch::x86_64::*;
 use rand::Rng;
+// use unroll::*;
 
-/// Generate a array of random bytes of length 3162 to be used as a sample block.
+/// Generate a array of random bytes of length 16 to be used as a sample block.
 pub fn random_bytes_16() -> [u8; 16] {
   let mut bytes = [0u8; 16];
   rand::thread_rng().fill(&mut bytes[..]);
   bytes
 }
 
-// #[inline(always)]
-pub unsafe fn encode(
-  key: [u8; 16], 
+/// Generate a array of random bytes of length 176 to be used as a flat key.
+pub fn random_bytes_176() -> [u8; 176] {
+  let mut bytes = [0u8; 176];
+  rand::thread_rng().fill(&mut bytes[..]);
+  bytes
+}
+
+#[inline(always)]
+// #[unroll_for_loops()]
+pub unsafe fn encode_aes_ni_128(
+  keys: [[u8; 16]; 11], 
   plaintext: [u8; 16],
   rounds: usize,
 ) -> [u8; 16] {
@@ -19,163 +28,7 @@ pub unsafe fn encode(
   // load plaintext data from memory into a single xmm register
   let mut pt_register = _mm_loadu_si128(plaintext.as_ptr() as *const __m128i);
   
-  // load key from memory into a single xmm register
-  let key_register = _mm_loadu_si128(key.as_ptr() as *const __m128i);
-
-  // xor the input with key
-  pt_register = _mm_xor_si128(pt_register, key_register);
-
-  // call r-1  round of Rijndael using AES-NI with same key for now
-  for _ in 1..rounds {
-    pt_register = _mm_aesenc_si128(pt_register, key_register);
-  }
-  
-  // encode final round
-  pt_register = _mm_aesenclast_si128(pt_register, key_register);
-  
-  // init memory for ciphertext
-  let mut ciphertext = [0u8; 16];
-
-  // store ciphertext back into memory and return
-  _mm_storeu_si128(ciphertext.as_mut_ptr() as *mut __m128i, pt_register);
-
-  // return ciphertext
-  ciphertext
-}
-
-#[inline(always)]
-pub unsafe fn decode(
-  key: [u8; 16], 
-  ciphertext: [u8; 16],
-  rounds: usize,
-) -> [u8; 16] {
-
-  // load ciphertext data from memory into a single xmm register
-  let mut ct_register = _mm_loadu_si128(ciphertext.as_ptr() as *const __m128i);
-  
-  // load key from memory into a single xmm register
-  let key_register = _mm_loadu_si128(key.as_ptr() as *const __m128i);
-  let mut inv_key_register = _mm_loadu_si128(key.as_ptr() as * const __m128i);
-  inv_key_register = _mm_aesimc_si128(inv_key_register);
-
-  // xor ciphertext with original key
-  ct_register = _mm_xor_si128(ct_register, key_register);
-
-  // apply r-1 rounds of inverse Rijndael using the same inverse key
-  for _ in 1..rounds {
-    ct_register = _mm_aesdec_si128(ct_register, inv_key_register);
-  }
-  
-  // apply final decoding with original key
-  ct_register = _mm_aesdeclast_si128(ct_register, key_register);
-
-  // init memory for plaintext
-  let mut plaintext = [0u8; 16];
-
-  // store plaintext back into memory and return
-  _mm_storeu_si128(plaintext.as_mut_ptr() as *mut __m128i, ct_register);
-
-  // return plaintext
-  plaintext
-}
-
-#[inline(always)]
-pub unsafe fn encode_pipelined(
-  key: [u8; 16], 
-  plaintexts: [[u8; 16]; 8],
-  rounds: usize,
-) -> [[u8; 16]; 4] {
-
-  // load plaintext data from memory into a each xmm register
-  let mut pt_0_register = _mm_loadu_si128(plaintexts[0].as_ptr() as *const __m128i);
-  let mut pt_1_register = _mm_loadu_si128(plaintexts[1].as_ptr() as *const __m128i);
-  let mut pt_2_register = _mm_loadu_si128(plaintexts[2].as_ptr() as *const __m128i);
-  let mut pt_3_register = _mm_loadu_si128(plaintexts[3].as_ptr() as *const __m128i);
-  // let mut pt_4_register = _mm_loadu_si128(plaintexts[4].as_ptr() as *const __m128i);
-  // let mut pt_5_register = _mm_loadu_si128(plaintexts[5].as_ptr() as *const __m128i);
-  // let mut pt_6_register = _mm_loadu_si128(plaintexts[6].as_ptr() as *const __m128i);
-  // let mut pt_7_register = _mm_loadu_si128(plaintexts[7].as_ptr() as *const __m128i);
-  
-  // load key from memory into a single xmm register
-  let key_register = _mm_loadu_si128(key.as_ptr() as *const __m128i);
-
-  // xor each input with key
-  pt_0_register = _mm_xor_si128(pt_0_register, key_register);
-  pt_1_register = _mm_xor_si128(pt_1_register, key_register);
-  pt_2_register = _mm_xor_si128(pt_2_register, key_register);
-  pt_3_register = _mm_xor_si128(pt_3_register, key_register);
-  // pt_4_register = _mm_xor_si128(pt_4_register, key_register);
-  // pt_5_register = _mm_xor_si128(pt_5_register, key_register);
-  // pt_6_register = _mm_xor_si128(pt_6_register, key_register);
-  // pt_7_register = _mm_xor_si128(pt_7_register, key_register);
-
-  // call r-1 rounds of Rijndael using AES-NI with same key for now
-  for _ in 1..rounds {
-    pt_0_register = _mm_aesenc_si128(pt_0_register, key_register);
-    pt_1_register = _mm_aesenc_si128(pt_1_register, key_register);
-    pt_2_register = _mm_aesenc_si128(pt_2_register, key_register);
-    pt_3_register = _mm_aesenc_si128(pt_3_register, key_register);
-    // pt_4_register = _mm_aesenc_si128(pt_4_register, key_register);
-    // pt_5_register = _mm_aesenc_si128(pt_5_register, key_register);
-    // pt_6_register = _mm_aesenc_si128(pt_6_register, key_register);
-    // pt_7_register = _mm_aesenc_si128(pt_7_register, key_register);
-  }
-  
-  // encode final round for each
-  pt_0_register = _mm_aesenclast_si128(pt_0_register, key_register);
-  pt_1_register = _mm_aesenclast_si128(pt_1_register, key_register);
-  pt_2_register = _mm_aesenclast_si128(pt_2_register, key_register);
-  pt_3_register = _mm_aesenclast_si128(pt_3_register, key_register);
-  // pt_4_register = _mm_aesenclast_si128(pt_4_register, key_register);
-  // pt_5_register = _mm_aesenclast_si128(pt_5_register, key_register);
-  // pt_6_register = _mm_aesenclast_si128(pt_6_register, key_register);
-  // pt_7_register = _mm_aesenclast_si128(pt_7_register, key_register);
-  
-  // init memory for ciphertexts
-  let mut ciphertext_0 = [0u8; 16];
-  let mut ciphertext_1 = [0u8; 16];
-  let mut ciphertext_2 = [0u8; 16];
-  let mut ciphertext_3 = [0u8; 16];
-  // let mut ciphertext_4 = [0u8; 16];
-  // let mut ciphertext_5 = [0u8; 16];
-  // let mut ciphertext_6= [0u8; 16];
-  // let mut ciphertext_7 = [0u8; 16];
-
-  // store ciphertexts back into memory and return
-  _mm_storeu_si128(ciphertext_0.as_mut_ptr() as *mut __m128i, pt_0_register);
-  _mm_storeu_si128(ciphertext_1.as_mut_ptr() as *mut __m128i, pt_1_register);
-  _mm_storeu_si128(ciphertext_2.as_mut_ptr() as *mut __m128i, pt_2_register);
-  _mm_storeu_si128(ciphertext_3.as_mut_ptr() as *mut __m128i, pt_3_register);
-  // _mm_storeu_si128(ciphertext_4.as_mut_ptr() as *mut __m128i, pt_4_register);
-  // _mm_storeu_si128(ciphertext_5.as_mut_ptr() as *mut __m128i, pt_5_register);
-  // _mm_storeu_si128(ciphertext_6.as_mut_ptr() as *mut __m128i, pt_6_register);
-  // _mm_storeu_si128(ciphertext_7.as_mut_ptr() as *mut __m128i, pt_7_register);
-
-  // return ciphertexts
-  [
-    ciphertext_0, 
-    ciphertext_1, 
-    ciphertext_2, 
-    ciphertext_3,
-    // ciphertext_4,
-    // ciphertext_5,
-    // ciphertext_6,
-    // ciphertext_7,
-  ]
-}
-
-
-#[inline(always)]
-pub unsafe fn encode_with_keys(
-  keys: [[u8; 16]; 96], 
-  plaintext: [u8; 16],
-  rounds: usize,
-) -> [u8; 16] {
-
-  // load plaintext data from memory into a single xmm register
-  let mut pt_register = _mm_loadu_si128(plaintext.as_ptr() as *const __m128i);
-  
-  // load key from memory into a single xmm register
+  // load keys from memory into a 11 xmm registers
   let key_0_register = _mm_loadu_si128(keys[0].as_ptr() as *const __m128i);
   let key_1_register = _mm_loadu_si128(keys[1].as_ptr() as *const __m128i);
   let key_2_register = _mm_loadu_si128(keys[2].as_ptr() as *const __m128i);
@@ -184,23 +37,30 @@ pub unsafe fn encode_with_keys(
   let key_5_register = _mm_loadu_si128(keys[5].as_ptr() as *const __m128i);
   let key_6_register = _mm_loadu_si128(keys[6].as_ptr() as *const __m128i);
   let key_7_register = _mm_loadu_si128(keys[7].as_ptr() as *const __m128i);
-  
-  // xor the input with key
-  pt_register = _mm_xor_si128(pt_register, key_0_register);
+  let key_8_register = _mm_loadu_si128(keys[8].as_ptr() as *const __m128i);
+  let key_9_register = _mm_loadu_si128(keys[9].as_ptr() as *const __m128i);
+  let key_10_register = _mm_loadu_si128(keys[10].as_ptr() as *const __m128i);
 
-  // call r-1  round of Rijndael using AES-NI with same key for now
-  for _ in 1..(rounds/6) {
+  for _ in 0..rounds {
+    // xor the input with first key (whitening)
+    pt_register = _mm_xor_si128(pt_register, key_0_register);
+
+    // call nine rounds of Rijndael using AES-NI with each key
     pt_register = _mm_aesenc_si128(pt_register, key_1_register);
     pt_register = _mm_aesenc_si128(pt_register, key_2_register);
     pt_register = _mm_aesenc_si128(pt_register, key_3_register);
     pt_register = _mm_aesenc_si128(pt_register, key_4_register);
     pt_register = _mm_aesenc_si128(pt_register, key_5_register);
-    pt_register = _mm_aesenc_si128(pt_register, key_6_register);  
+    pt_register = _mm_aesenc_si128(pt_register, key_6_register);
+    pt_register = _mm_aesenc_si128(pt_register, key_7_register);
+    pt_register = _mm_aesenc_si128(pt_register, key_8_register);
+    pt_register = _mm_aesenc_si128(pt_register, key_9_register);
+
+    // perform final round of AES
+    pt_register = _mm_aesenclast_si128(pt_register, key_10_register);
+    
   }
-  
-  // encode final round
-  pt_register = _mm_aesenclast_si128(pt_register, key_7_register);
-  
+
   // init memory for ciphertext
   let mut ciphertext = [0u8; 16];
 
@@ -212,19 +72,92 @@ pub unsafe fn encode_with_keys(
 }
 
 #[inline(always)]
-pub unsafe fn encode_pipelined_with_keys(
-  keys: [[u8; 16]; 96], 
-  plaintexts: [[u8; 16]; 8],
+pub unsafe fn decode_aes_ni_128(
+  keys: [[u8; 16]; 11], 
+  ciphertext: [u8; 16],
+  rounds: usize,
+) -> [u8; 16] {
+
+  // load plaintext data from memory into a single xmm register
+  let mut ct_register = _mm_loadu_si128(ciphertext.as_ptr() as *const __m128i);
+  
+  // load each key from memory into a 11 xmm registers
+  // then invert each of the keys for decryption
+
+  let key_0_register = _mm_loadu_si128(keys[0].as_ptr() as *const __m128i);
+
+  let key_1_register = _mm_loadu_si128(keys[1].as_ptr() as *const __m128i);
+  let inv_key_1_register =_mm_aesimc_si128(key_1_register);
+
+  let key_2_register = _mm_loadu_si128(keys[2].as_ptr() as *const __m128i);
+  let inv_key_2_register =_mm_aesimc_si128(key_2_register);
+
+  let key_3_register = _mm_loadu_si128(keys[3].as_ptr() as *const __m128i);
+  let inv_key_3_register =_mm_aesimc_si128(key_3_register);
+
+  let key_4_register = _mm_loadu_si128(keys[4].as_ptr() as *const __m128i);
+  let inv_key_4_register =_mm_aesimc_si128(key_4_register);
+
+  let key_5_register = _mm_loadu_si128(keys[5].as_ptr() as *const __m128i);
+  let inv_key_5_register =_mm_aesimc_si128(key_5_register);
+
+  let key_6_register = _mm_loadu_si128(keys[6].as_ptr() as *const __m128i);
+  let inv_key_6_register =_mm_aesimc_si128(key_6_register);
+
+  let key_7_register = _mm_loadu_si128(keys[7].as_ptr() as *const __m128i);
+  let inv_key_7_register =_mm_aesimc_si128(key_7_register);
+
+  let key_8_register = _mm_loadu_si128(keys[8].as_ptr() as *const __m128i);
+  let inv_key_8_register =_mm_aesimc_si128(key_8_register);
+
+  let key_9_register = _mm_loadu_si128(keys[9].as_ptr() as *const __m128i);
+  let inv_key_9_register =_mm_aesimc_si128(key_9_register);
+
+  let key_10_register = _mm_loadu_si128(keys[10].as_ptr() as *const __m128i);
+
+  for _ in 0..rounds {
+    // xor the input with last key (whitening)
+    ct_register = _mm_xor_si128(ct_register, key_10_register);
+
+    // call nine rounds of Rijndael using AES-NI with each inverse key
+    ct_register = _mm_aesdec_si128(ct_register, inv_key_9_register);
+    ct_register = _mm_aesdec_si128(ct_register, inv_key_8_register);
+    ct_register = _mm_aesdec_si128(ct_register, inv_key_7_register);
+    ct_register = _mm_aesdec_si128(ct_register, inv_key_6_register);
+    ct_register = _mm_aesdec_si128(ct_register, inv_key_5_register);
+    ct_register = _mm_aesdec_si128(ct_register, inv_key_4_register);
+    ct_register = _mm_aesdec_si128(ct_register, inv_key_3_register);
+    ct_register = _mm_aesdec_si128(ct_register, inv_key_2_register);
+    ct_register = _mm_aesdec_si128(ct_register, inv_key_1_register);
+    
+    // encode final round with first key
+    ct_register = _mm_aesdeclast_si128(ct_register, key_0_register);
+  }
+
+  // init memory for ciphertext
+  let mut plaintext = [0u8; 16];
+
+  // store ciphertext back into memory and return
+  _mm_storeu_si128(plaintext.as_mut_ptr() as *mut __m128i, ct_register);
+
+  // return ciphertext
+  plaintext
+}
+
+#[inline(always)]
+pub unsafe fn encode_aes_ni_128_pipelined_x4(
+  keys: [[u8; 16]; 11], 
+  plaintexts: [[u8; 16]; 4],
   rounds: usize,
 ) -> [[u8; 16]; 4] {
 
-  // load plaintext data from memory into a each xmm register
+  // load plaintext data from memory for each block into four xmm registers
   let mut pt_0_register = _mm_loadu_si128(plaintexts[0].as_ptr() as *const __m128i);
   let mut pt_1_register = _mm_loadu_si128(plaintexts[1].as_ptr() as *const __m128i);
   let mut pt_2_register = _mm_loadu_si128(plaintexts[2].as_ptr() as *const __m128i);
   let mut pt_3_register = _mm_loadu_si128(plaintexts[3].as_ptr() as *const __m128i);
-  
-  // load key from memory into a single xmm register
+
+  // load keys from memory into 11 xmm registers
   let key_0_register = _mm_loadu_si128(keys[0].as_ptr() as *const __m128i);
   let key_1_register = _mm_loadu_si128(keys[1].as_ptr() as *const __m128i);
   let key_2_register = _mm_loadu_si128(keys[2].as_ptr() as *const __m128i);
@@ -233,15 +166,18 @@ pub unsafe fn encode_pipelined_with_keys(
   let key_5_register = _mm_loadu_si128(keys[5].as_ptr() as *const __m128i);
   let key_6_register = _mm_loadu_si128(keys[6].as_ptr() as *const __m128i);
   let key_7_register = _mm_loadu_si128(keys[7].as_ptr() as *const __m128i);
+  let key_8_register = _mm_loadu_si128(keys[8].as_ptr() as *const __m128i);
+  let key_9_register = _mm_loadu_si128(keys[9].as_ptr() as *const __m128i);
+  let key_10_register = _mm_loadu_si128(keys[10].as_ptr() as *const __m128i);
 
-  // xor each input with key
-  pt_0_register = _mm_xor_si128(pt_0_register, key_0_register);
-  pt_1_register = _mm_xor_si128(pt_1_register, key_0_register);
-  pt_2_register = _mm_xor_si128(pt_2_register, key_0_register);
-  pt_3_register = _mm_xor_si128(pt_3_register, key_0_register);
+  for _ in 0..rounds {
+    // xor the input of each block with first key (whitening)
+    pt_0_register = _mm_xor_si128(pt_0_register, key_0_register);
+    pt_1_register = _mm_xor_si128(pt_1_register, key_0_register);
+    pt_2_register = _mm_xor_si128(pt_2_register, key_0_register);
+    pt_3_register = _mm_xor_si128(pt_3_register, key_0_register);
 
-  // call r-1 rounds of Rijndael using AES-NI with same key for now
-  for _ in 1..(rounds / 6) {
+    // call nine rounds of Rijndael using AES-NI with each key
     pt_0_register = _mm_aesenc_si128(pt_0_register, key_1_register);
     pt_1_register = _mm_aesenc_si128(pt_1_register, key_1_register);
     pt_2_register = _mm_aesenc_si128(pt_2_register, key_1_register);
@@ -271,151 +207,243 @@ pub unsafe fn encode_pipelined_with_keys(
     pt_1_register = _mm_aesenc_si128(pt_1_register, key_6_register);
     pt_2_register = _mm_aesenc_si128(pt_2_register, key_6_register);
     pt_3_register = _mm_aesenc_si128(pt_3_register, key_6_register);
+
+    pt_0_register = _mm_aesenc_si128(pt_0_register, key_7_register);
+    pt_1_register = _mm_aesenc_si128(pt_1_register, key_7_register);
+    pt_2_register = _mm_aesenc_si128(pt_2_register, key_7_register);
+    pt_3_register = _mm_aesenc_si128(pt_3_register, key_7_register);
+
+    pt_0_register = _mm_aesenc_si128(pt_0_register, key_8_register);
+    pt_1_register = _mm_aesenc_si128(pt_1_register, key_8_register);
+    pt_2_register = _mm_aesenc_si128(pt_2_register, key_8_register);
+    pt_3_register = _mm_aesenc_si128(pt_3_register, key_8_register);
+
+    pt_0_register = _mm_aesenc_si128(pt_0_register, key_9_register);
+    pt_1_register = _mm_aesenc_si128(pt_1_register, key_9_register);
+    pt_2_register = _mm_aesenc_si128(pt_2_register, key_9_register);
+    pt_3_register = _mm_aesenc_si128(pt_3_register, key_9_register);
+    
+    // encode final round with last key
+    pt_0_register = _mm_aesenclast_si128(pt_0_register, key_10_register);
+    pt_1_register = _mm_aesenclast_si128(pt_1_register, key_10_register);
+    pt_2_register = _mm_aesenclast_si128(pt_2_register, key_10_register);
+    pt_3_register = _mm_aesenclast_si128(pt_3_register, key_10_register);
   }
-  
-  // encode final round for each
-  pt_0_register = _mm_aesenclast_si128(pt_0_register, key_7_register);
-  pt_1_register = _mm_aesenclast_si128(pt_1_register, key_7_register);
-  pt_2_register = _mm_aesenclast_si128(pt_2_register, key_7_register);
-  pt_3_register = _mm_aesenclast_si128(pt_3_register, key_7_register);
-  
-  // init memory for ciphertexts
+
+  // init memory for ciphertext
   let mut ciphertext_0 = [0u8; 16];
   let mut ciphertext_1 = [0u8; 16];
   let mut ciphertext_2 = [0u8; 16];
   let mut ciphertext_3 = [0u8; 16];
 
-  // store ciphertexts back into memory and return
+  // store ciphertext back into memory and return
   _mm_storeu_si128(ciphertext_0.as_mut_ptr() as *mut __m128i, pt_0_register);
   _mm_storeu_si128(ciphertext_1.as_mut_ptr() as *mut __m128i, pt_1_register);
   _mm_storeu_si128(ciphertext_2.as_mut_ptr() as *mut __m128i, pt_2_register);
   _mm_storeu_si128(ciphertext_3.as_mut_ptr() as *mut __m128i, pt_3_register);
- 
-  // return ciphertexts
+
+  // return ciphertext
   [
-    ciphertext_0, 
-    ciphertext_1, 
-    ciphertext_2, 
+    ciphertext_0,
+    ciphertext_1,
+    ciphertext_2,
     ciphertext_3,
   ]
 }
 
 #[inline(always)]
-pub unsafe fn encode_pipelined_with_keys_attacker(
-  keys: [[u8; 16]; 96], 
+pub unsafe fn encode_aes_ni_128_pipelined_x8(
+  keys: [[u8; 16]; 11], 
   plaintexts: [[u8; 16]; 8],
   rounds: usize,
-) -> [[u8; 16]; 4] {
+) -> [[u8; 16]; 8] {
 
-  // load plaintext data from memory into a each xmm register
+  // load plaintext data from memory for each block into four xmm registers
   let mut pt_0_register = _mm_loadu_si128(plaintexts[0].as_ptr() as *const __m128i);
-  let mut pt_1_register = _mm_loadu_si128(plaintexts[0].as_ptr() as *const __m128i);
-  let mut pt_2_register = _mm_loadu_si128(plaintexts[0].as_ptr() as *const __m128i);
-  let mut pt_3_register = _mm_loadu_si128(plaintexts[0].as_ptr() as *const __m128i);
-  
-  // load whitening key from memory into each xmm register
-  let key_0a_register = _mm_loadu_si128(keys[0].as_ptr() as *const __m128i);
-  let key_0b_register = _mm_loadu_si128(keys[8].as_ptr() as *const __m128i);
-  let key_0c_register = _mm_loadu_si128(keys[16].as_ptr() as *const __m128i);
-  let key_0d_register = _mm_loadu_si128(keys[24].as_ptr() as *const __m128i);
+  let mut pt_1_register = _mm_loadu_si128(plaintexts[1].as_ptr() as *const __m128i);
+  let mut pt_2_register = _mm_loadu_si128(plaintexts[2].as_ptr() as *const __m128i);
+  let mut pt_3_register = _mm_loadu_si128(plaintexts[3].as_ptr() as *const __m128i);
+  let mut pt_4_register = _mm_loadu_si128(plaintexts[4].as_ptr() as *const __m128i);
+  let mut pt_5_register = _mm_loadu_si128(plaintexts[5].as_ptr() as *const __m128i);
+  let mut pt_6_register = _mm_loadu_si128(plaintexts[6].as_ptr() as *const __m128i);
+  let mut pt_7_register = _mm_loadu_si128(plaintexts[7].as_ptr() as *const __m128i);
 
-  // xor each input with whitening key
-  pt_0_register = _mm_xor_si128(pt_0_register, key_0a_register);
-  pt_1_register = _mm_xor_si128(pt_1_register, key_0b_register);
-  pt_2_register = _mm_xor_si128(pt_2_register, key_0c_register);
-  pt_3_register = _mm_xor_si128(pt_3_register, key_0d_register);
+  // load keys from memory into 11 xmm registers
+  let key_0_register = _mm_loadu_si128(keys[0].as_ptr() as *const __m128i);
+  let key_1_register = _mm_loadu_si128(keys[1].as_ptr() as *const __m128i);
+  let key_2_register = _mm_loadu_si128(keys[2].as_ptr() as *const __m128i);
+  let key_3_register = _mm_loadu_si128(keys[3].as_ptr() as *const __m128i);
+  let key_4_register = _mm_loadu_si128(keys[4].as_ptr() as *const __m128i);
+  let key_5_register = _mm_loadu_si128(keys[5].as_ptr() as *const __m128i);
+  let key_6_register = _mm_loadu_si128(keys[6].as_ptr() as *const __m128i);
+  let key_7_register = _mm_loadu_si128(keys[7].as_ptr() as *const __m128i);
+  let key_8_register = _mm_loadu_si128(keys[8].as_ptr() as *const __m128i);
+  let key_9_register = _mm_loadu_si128(keys[9].as_ptr() as *const __m128i);
+  let key_10_register = _mm_loadu_si128(keys[10].as_ptr() as *const __m128i);
 
-  for _ in 1..rounds/6 {
-    // load first three rounds sets of keys
-    let key_1a_register = _mm_loadu_si128(keys[1].as_ptr() as *const __m128i);
-    let key_1b_register = _mm_loadu_si128(keys[9].as_ptr() as *const __m128i);
-    let key_1c_register = _mm_loadu_si128(keys[17].as_ptr() as *const __m128i);
-    let key_1d_register = _mm_loadu_si128(keys[25].as_ptr() as *const __m128i);
+  for _ in 0..rounds {
+    // xor the input of each block with first key (whitening)
+    pt_0_register = _mm_xor_si128(pt_0_register, key_0_register);
+    pt_1_register = _mm_xor_si128(pt_1_register, key_0_register);
+    pt_2_register = _mm_xor_si128(pt_2_register, key_0_register);
+    pt_3_register = _mm_xor_si128(pt_3_register, key_0_register);
+    pt_4_register = _mm_xor_si128(pt_4_register, key_0_register);
+    pt_5_register = _mm_xor_si128(pt_5_register, key_0_register);
+    pt_6_register = _mm_xor_si128(pt_6_register, key_0_register);
+    pt_7_register = _mm_xor_si128(pt_7_register, key_0_register);
 
-    let key_2a_register = _mm_loadu_si128(keys[2].as_ptr() as *const __m128i);
-    let key_2b_register = _mm_loadu_si128(keys[10].as_ptr() as *const __m128i);
-    let key_2c_register = _mm_loadu_si128(keys[18].as_ptr() as *const __m128i);
-    let key_2d_register = _mm_loadu_si128(keys[26].as_ptr() as *const __m128i);
+    // call nine rounds of Rijndael using AES-NI with each key
+    pt_0_register = _mm_aesenc_si128(pt_0_register, key_1_register);
+    pt_1_register = _mm_aesenc_si128(pt_1_register, key_1_register);
+    pt_2_register = _mm_aesenc_si128(pt_2_register, key_1_register);
+    pt_3_register = _mm_aesenc_si128(pt_3_register, key_1_register);
+    pt_4_register = _mm_aesenc_si128(pt_4_register, key_1_register);
+    pt_5_register = _mm_aesenc_si128(pt_5_register, key_1_register);
+    pt_6_register = _mm_aesenc_si128(pt_6_register, key_1_register);
+    pt_7_register = _mm_aesenc_si128(pt_7_register, key_1_register);
 
-    let key_3a_register = _mm_loadu_si128(keys[3].as_ptr() as *const __m128i);
-    let key_3b_register = _mm_loadu_si128(keys[11].as_ptr() as *const __m128i);
-    let key_3c_register = _mm_loadu_si128(keys[19].as_ptr() as *const __m128i);
-    let key_3d_register = _mm_loadu_si128(keys[27].as_ptr() as *const __m128i);
+    pt_0_register = _mm_aesenc_si128(pt_0_register, key_2_register);
+    pt_1_register = _mm_aesenc_si128(pt_1_register, key_2_register);
+    pt_2_register = _mm_aesenc_si128(pt_2_register, key_2_register);
+    pt_3_register = _mm_aesenc_si128(pt_3_register, key_2_register);
+    pt_4_register = _mm_aesenc_si128(pt_4_register, key_2_register);
+    pt_5_register = _mm_aesenc_si128(pt_5_register, key_2_register);
+    pt_6_register = _mm_aesenc_si128(pt_6_register, key_2_register);
+    pt_7_register = _mm_aesenc_si128(pt_7_register, key_2_register);
 
-    pt_0_register = _mm_aesenc_si128(pt_0_register, key_1a_register);
-    pt_1_register = _mm_aesenc_si128(pt_1_register, key_1b_register);
-    pt_2_register = _mm_aesenc_si128(pt_2_register, key_1c_register);
-    pt_3_register = _mm_aesenc_si128(pt_3_register, key_1d_register);
+    pt_0_register = _mm_aesenc_si128(pt_0_register, key_3_register);
+    pt_1_register = _mm_aesenc_si128(pt_1_register, key_3_register);
+    pt_2_register = _mm_aesenc_si128(pt_2_register, key_3_register);
+    pt_3_register = _mm_aesenc_si128(pt_3_register, key_3_register);
+    pt_4_register = _mm_aesenc_si128(pt_4_register, key_3_register);
+    pt_5_register = _mm_aesenc_si128(pt_5_register, key_3_register);
+    pt_6_register = _mm_aesenc_si128(pt_6_register, key_3_register);
+    pt_7_register = _mm_aesenc_si128(pt_7_register, key_3_register);
 
-    let key_4a_register = _mm_loadu_si128(keys[4].as_ptr() as *const __m128i);
-    let key_4b_register = _mm_loadu_si128(keys[12].as_ptr() as *const __m128i);
-    let key_4c_register = _mm_loadu_si128(keys[20].as_ptr() as *const __m128i);
-    let key_4d_register = _mm_loadu_si128(keys[28].as_ptr() as *const __m128i);
+    pt_0_register = _mm_aesenc_si128(pt_0_register, key_4_register);
+    pt_1_register = _mm_aesenc_si128(pt_1_register, key_4_register);
+    pt_2_register = _mm_aesenc_si128(pt_2_register, key_4_register);
+    pt_3_register = _mm_aesenc_si128(pt_3_register, key_4_register);
+    pt_4_register = _mm_aesenc_si128(pt_4_register, key_4_register);
+    pt_5_register = _mm_aesenc_si128(pt_5_register, key_4_register);
+    pt_6_register = _mm_aesenc_si128(pt_6_register, key_4_register);
+    pt_7_register = _mm_aesenc_si128(pt_7_register, key_4_register);
 
-    pt_0_register = _mm_aesenc_si128(pt_0_register, key_2a_register);
-    pt_1_register = _mm_aesenc_si128(pt_1_register, key_2b_register);
-    pt_2_register = _mm_aesenc_si128(pt_2_register, key_2c_register);
-    pt_3_register = _mm_aesenc_si128(pt_3_register, key_2d_register);
+    pt_0_register = _mm_aesenc_si128(pt_0_register, key_5_register);
+    pt_1_register = _mm_aesenc_si128(pt_1_register, key_5_register);
+    pt_2_register = _mm_aesenc_si128(pt_2_register, key_5_register);
+    pt_3_register = _mm_aesenc_si128(pt_3_register, key_5_register);
+    pt_4_register = _mm_aesenc_si128(pt_4_register, key_5_register);
+    pt_5_register = _mm_aesenc_si128(pt_5_register, key_5_register);
+    pt_6_register = _mm_aesenc_si128(pt_6_register, key_5_register);
+    pt_7_register = _mm_aesenc_si128(pt_7_register, key_5_register);
 
-    let key_5a_register = _mm_loadu_si128(keys[5].as_ptr() as *const __m128i);
-    let key_5b_register = _mm_loadu_si128(keys[13].as_ptr() as *const __m128i);
-    let key_5c_register = _mm_loadu_si128(keys[21].as_ptr() as *const __m128i);
-    let key_5d_register = _mm_loadu_si128(keys[29].as_ptr() as *const __m128i);
+    pt_0_register = _mm_aesenc_si128(pt_0_register, key_6_register);
+    pt_1_register = _mm_aesenc_si128(pt_1_register, key_6_register);
+    pt_2_register = _mm_aesenc_si128(pt_2_register, key_6_register);
+    pt_3_register = _mm_aesenc_si128(pt_3_register, key_6_register);
+    pt_4_register = _mm_aesenc_si128(pt_4_register, key_6_register);
+    pt_5_register = _mm_aesenc_si128(pt_5_register, key_6_register);
+    pt_6_register = _mm_aesenc_si128(pt_6_register, key_6_register);
+    pt_7_register = _mm_aesenc_si128(pt_7_register, key_6_register);
 
-    pt_0_register = _mm_aesenc_si128(pt_0_register, key_3a_register);
-    pt_1_register = _mm_aesenc_si128(pt_1_register, key_3b_register);
-    pt_2_register = _mm_aesenc_si128(pt_2_register, key_3c_register);
-    pt_3_register = _mm_aesenc_si128(pt_3_register, key_3d_register);
+    pt_0_register = _mm_aesenc_si128(pt_0_register, key_7_register);
+    pt_1_register = _mm_aesenc_si128(pt_1_register, key_7_register);
+    pt_2_register = _mm_aesenc_si128(pt_2_register, key_7_register);
+    pt_3_register = _mm_aesenc_si128(pt_3_register, key_7_register);
+    pt_4_register = _mm_aesenc_si128(pt_4_register, key_7_register);
+    pt_5_register = _mm_aesenc_si128(pt_5_register, key_7_register);
+    pt_6_register = _mm_aesenc_si128(pt_6_register, key_7_register);
+    pt_7_register = _mm_aesenc_si128(pt_7_register, key_7_register);
 
-    let key_6a_register = _mm_loadu_si128(keys[6].as_ptr() as *const __m128i);
-    let key_6b_register = _mm_loadu_si128(keys[14].as_ptr() as *const __m128i);
-    let key_6c_register = _mm_loadu_si128(keys[22].as_ptr() as *const __m128i);
-    let key_6d_register = _mm_loadu_si128(keys[30].as_ptr() as *const __m128i);
+    pt_0_register = _mm_aesenc_si128(pt_0_register, key_8_register);
+    pt_1_register = _mm_aesenc_si128(pt_1_register, key_8_register);
+    pt_2_register = _mm_aesenc_si128(pt_2_register, key_8_register);
+    pt_3_register = _mm_aesenc_si128(pt_3_register, key_8_register);
+    pt_4_register = _mm_aesenc_si128(pt_4_register, key_8_register);
+    pt_5_register = _mm_aesenc_si128(pt_5_register, key_8_register);
+    pt_6_register = _mm_aesenc_si128(pt_6_register, key_8_register);
+    pt_7_register = _mm_aesenc_si128(pt_7_register, key_8_register);
 
-    pt_0_register = _mm_aesenc_si128(pt_0_register, key_4a_register);
-    pt_1_register = _mm_aesenc_si128(pt_1_register, key_4b_register);
-    pt_2_register = _mm_aesenc_si128(pt_2_register, key_4c_register);
-    pt_3_register = _mm_aesenc_si128(pt_3_register, key_4d_register);
-
-    pt_0_register = _mm_aesenc_si128(pt_0_register, key_5a_register);
-    pt_1_register = _mm_aesenc_si128(pt_1_register, key_5b_register);
-    pt_2_register = _mm_aesenc_si128(pt_2_register, key_5c_register);
-    pt_3_register = _mm_aesenc_si128(pt_3_register, key_5d_register);
-
-    pt_0_register = _mm_aesenc_si128(pt_0_register, key_6a_register);
-    pt_1_register = _mm_aesenc_si128(pt_1_register, key_6b_register);
-    pt_2_register = _mm_aesenc_si128(pt_2_register, key_6c_register);
-    pt_3_register = _mm_aesenc_si128(pt_3_register, key_6d_register);
+    pt_0_register = _mm_aesenc_si128(pt_0_register, key_9_register);
+    pt_1_register = _mm_aesenc_si128(pt_1_register, key_9_register);
+    pt_2_register = _mm_aesenc_si128(pt_2_register, key_9_register);
+    pt_3_register = _mm_aesenc_si128(pt_3_register, key_9_register);
+    pt_4_register = _mm_aesenc_si128(pt_4_register, key_9_register);
+    pt_5_register = _mm_aesenc_si128(pt_5_register, key_9_register);
+    pt_6_register = _mm_aesenc_si128(pt_6_register, key_9_register);
+    pt_7_register = _mm_aesenc_si128(pt_7_register, key_9_register);
+    
+    // encode final round with last key
+    pt_0_register = _mm_aesenclast_si128(pt_0_register, key_10_register);
+    pt_1_register = _mm_aesenclast_si128(pt_1_register, key_10_register);
+    pt_2_register = _mm_aesenclast_si128(pt_2_register, key_10_register);
+    pt_3_register = _mm_aesenclast_si128(pt_3_register, key_10_register);
+    pt_4_register = _mm_aesenclast_si128(pt_4_register, key_10_register);
+    pt_5_register = _mm_aesenclast_si128(pt_5_register, key_10_register);
+    pt_6_register = _mm_aesenclast_si128(pt_6_register, key_10_register);
+    pt_7_register = _mm_aesenclast_si128(pt_7_register, key_10_register);
   }
-
-  let key_7a_register = _mm_loadu_si128(keys[7].as_ptr() as *const __m128i);
-  let key_7b_register = _mm_loadu_si128(keys[15].as_ptr() as *const __m128i);
-  let key_7c_register = _mm_loadu_si128(keys[23].as_ptr() as *const __m128i);
-  let key_7d_register = _mm_loadu_si128(keys[31].as_ptr() as *const __m128i);
-
-  // encode final round for each
-  pt_0_register = _mm_aesenclast_si128(pt_0_register, key_7a_register);
-  pt_1_register = _mm_aesenclast_si128(pt_1_register, key_7b_register);
-  pt_2_register = _mm_aesenclast_si128(pt_2_register, key_7c_register);
-  pt_3_register = _mm_aesenclast_si128(pt_3_register, key_7d_register);
-  
+ 
   // init memory for ciphertexts
   let mut ciphertext_0 = [0u8; 16];
   let mut ciphertext_1 = [0u8; 16];
   let mut ciphertext_2 = [0u8; 16];
   let mut ciphertext_3 = [0u8; 16];
+  let mut ciphertext_4 = [0u8; 16];
+  let mut ciphertext_5 = [0u8; 16];
+  let mut ciphertext_6 = [0u8; 16];
+  let mut ciphertext_7 = [0u8; 16];
 
   // store ciphertexts back into memory and return
   _mm_storeu_si128(ciphertext_0.as_mut_ptr() as *mut __m128i, pt_0_register);
   _mm_storeu_si128(ciphertext_1.as_mut_ptr() as *mut __m128i, pt_1_register);
   _mm_storeu_si128(ciphertext_2.as_mut_ptr() as *mut __m128i, pt_2_register);
   _mm_storeu_si128(ciphertext_3.as_mut_ptr() as *mut __m128i, pt_3_register);
- 
+  _mm_storeu_si128(ciphertext_4.as_mut_ptr() as *mut __m128i, pt_4_register);
+  _mm_storeu_si128(ciphertext_5.as_mut_ptr() as *mut __m128i, pt_5_register);
+  _mm_storeu_si128(ciphertext_6.as_mut_ptr() as *mut __m128i, pt_6_register);
+  _mm_storeu_si128(ciphertext_7.as_mut_ptr() as *mut __m128i, pt_7_register);
+
   // return ciphertexts
   [
-    ciphertext_0, 
-    ciphertext_1, 
-    ciphertext_2, 
+    ciphertext_0,
+    ciphertext_1,
+    ciphertext_2,
     ciphertext_3,
+    ciphertext_4,
+    ciphertext_5,
+    ciphertext_6,
+    ciphertext_7,
   ]
+}
+
+#[inline(always)]
+pub unsafe fn encode_aes_ni_c_128(
+  keys: [u8; 176],
+  plaintext: [u8; 16],
+  rounds: usize,
+) -> [u8; 16] {
+  let mut output = [0u8; 16];
+  aesni_enc_block(plaintext.as_ptr(), keys.as_ptr(), rounds, output.as_mut_ptr());
+  output
+}
+
+#[inline(always)]
+pub unsafe fn decode_aes_ni_c_128(
+  keys: [u8; 176],
+  ciphertext: [u8; 16],
+  rounds: usize,
+) -> [u8; 16] {
+  let mut output = [0u8; 16];
+  aesni_dec_block(ciphertext.as_ptr(), keys.as_ptr(), rounds, output.as_mut_ptr());
+  output
+}
+
+// Import C implementations
+#[link(name = "vaes_c.a")]
+extern "C" {
+    fn aesni_enc_block(input: *const u8, key: *const u8, rounds: usize, output: *mut u8);
+
+    fn aesni_dec_block(input: *const u8, key: *const u8, rounds: usize, output: *mut u8);
 }

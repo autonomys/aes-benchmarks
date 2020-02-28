@@ -3,12 +3,19 @@ name = "aes-benchmarks"
 version = "0.1.0"
 authors = ["subspace"]
 edition = "2018"
+build = "build.rs"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
 rand = "0.7.2"
+aes-soft = "0.3.3"
+aes_frast = "0.1.5"
 criterion = "0.3.1"
+unroll = "0.1.4"
+
+[build-dependencies]
+cc = "1.0.47"
 
 [profile]
 [profile.release]
