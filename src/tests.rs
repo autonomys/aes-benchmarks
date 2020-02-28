@@ -275,9 +275,8 @@ mod tests {
   fn test_vaes_ni_c() {
     // test encode
     let block = unsafe { encode_vaes_ni_c_512(FLAT_KEYS, FLAT_INPUTS[0], 1)};
-    assert_eq!(block, FLAT_EXPECTED_OUTPUTS[0]);
-
-    // test decode
+    assert!(block.iter().zip(FLAT_EXPECTED_OUTPUTS[0].iter()).all(|(a,b)| a == b));
+    // test decode)
     // let decoded_block = unsafe { decode_aes_ni_c_512(FLAT_KEYS, block, 1) };
     // assert_eq!(decoded_block, INPUTS[0]);
   }
