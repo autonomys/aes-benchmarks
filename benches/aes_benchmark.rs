@@ -122,17 +122,6 @@ pub fn criterion_benchmark(c: &mut Criterion) {
     );
 
     group.bench_function(
-      "encode-vaes-ni-c-direct-single", 
-      |b| b.iter(
-        || unsafe { 
-          black_box(
-            encode_vaes_ni_c_512(flat_keys, flat_inputs_64, 1)
-          ) 
-        }
-      )
-    );
-
-    group.bench_function(
       "encode-aes-ni-x4-direct-single", 
       |b| b.iter(
         || unsafe { 
@@ -167,17 +156,6 @@ pub fn criterion_benchmark(c: &mut Criterion) {
             ],
             1,
           ) 
-        )
-       }
-      )
-    );
-
-    group.bench_function(
-      "encode-vaes-ni-x3-direct-single", 
-      |b| b.iter(
-        || unsafe { 
-          black_box(
-            encode_vaes_ni_c_512_x3(flat_keys, flat_inputs_192, 1) 
         )
        }
       )
@@ -256,6 +234,39 @@ pub fn criterion_benchmark(c: &mut Criterion) {
       )
     );
 
+    group.bench_function(
+      "encode-vaes-ni-c-direct-single", 
+      |b| b.iter(
+        || unsafe { 
+          black_box(
+            encode_vaes_ni_c_512(flat_keys, flat_inputs_64, 1)
+          ) 
+        }
+      )
+    );
+
+    group.bench_function(
+      "encode-vaes-ni-c-direct-single-iterated", 
+      |b| b.iter(
+        || unsafe { 
+          black_box(
+            encode_vaes_ni_c_512(flat_keys, flat_inputs_64, 4096)
+          ) 
+        }
+      )
+    );
+
+    group.bench_function(
+      "encode-vaes-ni-x3-direct-single", 
+      |b| b.iter(
+        || unsafe { 
+          black_box(
+            encode_vaes_ni_c_512_x3(flat_keys, flat_inputs_192, 1) 
+        )
+       }
+      )
+    );
+    
     group.bench_function(
       "encode-vaes-ni-x3-c-direct-iterated", 
       |b| b.iter(
