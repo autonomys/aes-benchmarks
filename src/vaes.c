@@ -160,7 +160,7 @@ void vaesni_enc_block(
 }
 
 __attribute__((target("aes,avx512f,vaes")))
-void vaesni_enc_block_x4(
+void vaesni_enc_block_x3(
   const unsigned char* input,
   const unsigned char* key,  
   size_t rounds,
