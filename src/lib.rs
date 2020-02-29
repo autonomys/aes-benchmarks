@@ -430,17 +430,6 @@ pub unsafe fn encode_aes_ni_c_128(
 }
 
 #[inline(always)]
-pub unsafe fn decode_aes_ni_c_128(
-  keys: [u8; 176],
-  ciphertext: [u8; 16],
-  rounds: usize,
-) -> [u8; 16] {
-  let mut output = [0u8; 16];
-  aesni_dec_block(ciphertext.as_ptr(), keys.as_ptr(), rounds, output.as_mut_ptr());
-  output
-}
-
-#[inline(always)]
 pub unsafe fn encode_vaes_ni_c_512(
   keys: [u8; 176],
   plaintext: [u8; 64],
@@ -451,12 +440,25 @@ pub unsafe fn encode_vaes_ni_c_512(
   output
 }
 
+#[inline(always)]
+pub unsafe fn encode_vaes_ni_c_512_x4(
+  keys: [u8; 176],
+  plaintext: [u8; 192],
+  rounds: usize,
+) -> [[u8; 64]; 3] {
+  let mut output_0 = [0u8; 64];
+  let mut output_1 = [0u8; 64];
+  let mut output_2 = [0u8; 64];
+  vaesni_enc_block_x4(plaintext.as_ptr(), keys.as_ptr(), rounds, output_0.as_mut_ptr(), output_1.as_mut_ptr(), output_2.as_mut_ptr());
+  [output_0, output_1, output_2]
+}
+
 // Import C implementations
 #[link(name = "vaes_c.a")]
 extern "C" {
     fn aesni_enc_block(input: *const u8, key: *const u8, rounds: usize, output: *mut u8);
 
-    fn aesni_dec_block(input: *const u8, key: *const u8, rounds: usize, output: *mut u8);
-
     fn vaesni_enc_block(input: *const u8, key: *const u8, rounds: usize, output: *mut u8);
+
+    fn vaesni_enc_block_x4(input: *const u8, key: *const u8, rounds: usize, output_0: *mut u8, output_1: *mut u8, output_2: *mut u8);
 }
