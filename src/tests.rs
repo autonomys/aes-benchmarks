@@ -323,7 +323,7 @@ mod tests {
   #[test]
   fn test_vaes_ni_c_x4() {
     // test encode
-    let blocks = unsafe { encode_vaes_ni_c_512_x4(FLAT_KEYS, TWELVE_FLAT_INPUTS, 1)};
+    let blocks = unsafe { encode_vaes_ni_c_512_x3(FLAT_KEYS, TWELVE_FLAT_INPUTS, 1)};
     for (index, block) in blocks.iter().enumerate() {
       assert!(block.iter().zip(FLAT_EXPECTED_OUTPUTS[index * 64..(index + 1) * 64].iter()).all(|(a,b)| a == b));
     }

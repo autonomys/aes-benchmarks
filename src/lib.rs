@@ -17,6 +17,20 @@ pub fn random_bytes_176() -> [u8; 176] {
   bytes
 }
 
+/// Generate a array of random bytes of length 176 to be used as a flat key.
+pub fn random_bytes_64() -> [u8; 64] {
+  let mut bytes = [0u8; 64];
+  rand::thread_rng().fill(&mut bytes[..]);
+  bytes
+}
+
+/// Generate a array of random bytes of length 176 to be used as a flat key.
+pub fn random_bytes_192() -> [u8; 192] {
+  let mut bytes = [0u8; 192];
+  rand::thread_rng().fill(&mut bytes[..]);
+  bytes
+}
+
 #[inline(always)]
 // #[unroll_for_loops()]
 pub unsafe fn encode_aes_ni_128(
@@ -441,7 +455,7 @@ pub unsafe fn encode_vaes_ni_c_512(
 }
 
 #[inline(always)]
-pub unsafe fn encode_vaes_ni_c_512_x4(
+pub unsafe fn encode_vaes_ni_c_512_x3(
   keys: [u8; 176],
   plaintext: [u8; 192],
   rounds: usize,
@@ -449,7 +463,7 @@ pub unsafe fn encode_vaes_ni_c_512_x4(
   let mut output_0 = [0u8; 64];
   let mut output_1 = [0u8; 64];
   let mut output_2 = [0u8; 64];
-  vaesni_enc_block_x4(plaintext.as_ptr(), keys.as_ptr(), rounds, output_0.as_mut_ptr(), output_1.as_mut_ptr(), output_2.as_mut_ptr());
+  vaesni_enc_block_x3(plaintext.as_ptr(), keys.as_ptr(), rounds, output_0.as_mut_ptr(), output_1.as_mut_ptr(), output_2.as_mut_ptr());
   [output_0, output_1, output_2]
 }
 
@@ -460,5 +474,5 @@ extern "C" {
 
     fn vaesni_enc_block(input: *const u8, key: *const u8, rounds: usize, output: *mut u8);
 
-    fn vaesni_enc_block_x4(input: *const u8, key: *const u8, rounds: usize, output_0: *mut u8, output_1: *mut u8, output_2: *mut u8);
+    fn vaesni_enc_block_x3(input: *const u8, key: *const u8, rounds: usize, output_0: *mut u8, output_1: *mut u8, output_2: *mut u8);
 }
