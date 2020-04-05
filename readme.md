@@ -4,6 +4,13 @@ A collection of scripts, libraries, and notes on the performance across differen
 
 ### Machine Setup
 ```
+# install curl, git, gcc (latest), build tools
+
+$ sudo add-apt-repository ppa:ubuntu-toolchain-r/test
+$ sudo apt update
+$ sudo apt install git curl build-essential gcc-9
+$ sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-9 60 --slave /usr/bin/g++ g++ /usr/bin/g++-9
+
 # Install Rust
 $ curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 
@@ -20,13 +27,7 @@ $ rustc --version
 $ rustup toolchain install nightly
 $ rustup default nightly
 $ rustc --version
-
-# Install/Update Clang
-
-# Install CUDA
-
-# Install OpenCL
-
+r
 ```
 
 ### SSH Testing
