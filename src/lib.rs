@@ -34,14 +34,14 @@ pub fn random_bytes_192() -> [u8; 192] {
 #[inline(always)]
 // #[unroll_for_loops()]
 pub unsafe fn encode_aes_ni_128(
-  keys: [[u8; 16]; 11], 
-  plaintext: [u8; 16],
+  keys: &[[u8; 16]; 11],
+  plaintext: &[u8; 16],
   rounds: usize,
 ) -> [u8; 16] {
 
   // load plaintext data from memory into a single xmm register
   let mut pt_register = _mm_loadu_si128(plaintext.as_ptr() as *const __m128i);
-  
+
   // load keys from memory into a 11 xmm registers
   let key_0_register = _mm_loadu_si128(keys[0].as_ptr() as *const __m128i);
   let key_1_register = _mm_loadu_si128(keys[1].as_ptr() as *const __m128i);
@@ -72,7 +72,7 @@ pub unsafe fn encode_aes_ni_128(
 
     // perform final round of AES
     pt_register = _mm_aesenclast_si128(pt_register, key_10_register);
-    
+
   }
 
   // init memory for ciphertext
@@ -87,14 +87,14 @@ pub unsafe fn encode_aes_ni_128(
 
 #[inline(always)]
 pub unsafe fn decode_aes_ni_128(
-  keys: [[u8; 16]; 11], 
-  ciphertext: [u8; 16],
+  keys: &[[u8; 16]; 11],
+  ciphertext: &[u8; 16],
   rounds: usize,
 ) -> [u8; 16] {
 
   // load plaintext data from memory into a single xmm register
   let mut ct_register = _mm_loadu_si128(ciphertext.as_ptr() as *const __m128i);
-  
+
   // load each key from memory into a 11 xmm registers
   // then invert each of the keys for decryption
 
@@ -143,7 +143,7 @@ pub unsafe fn decode_aes_ni_128(
     ct_register = _mm_aesdec_si128(ct_register, inv_key_3_register);
     ct_register = _mm_aesdec_si128(ct_register, inv_key_2_register);
     ct_register = _mm_aesdec_si128(ct_register, inv_key_1_register);
-    
+
     // encode final round with first key
     ct_register = _mm_aesdeclast_si128(ct_register, key_0_register);
   }
@@ -160,8 +160,8 @@ pub unsafe fn decode_aes_ni_128(
 
 #[inline(always)]
 pub unsafe fn encode_aes_ni_128_pipelined_x4(
-  keys: [[u8; 16]; 11], 
-  plaintexts: [[u8; 16]; 4],
+  keys: &[[u8; 16]; 11],
+  plaintexts: &[[u8; 16]; 4],
   rounds: usize,
 ) -> [[u8; 16]; 4] {
 
@@ -236,7 +236,7 @@ pub unsafe fn encode_aes_ni_128_pipelined_x4(
     pt_1_register = _mm_aesenc_si128(pt_1_register, key_9_register);
     pt_2_register = _mm_aesenc_si128(pt_2_register, key_9_register);
     pt_3_register = _mm_aesenc_si128(pt_3_register, key_9_register);
-    
+
     // encode final round with last key
     pt_0_register = _mm_aesenclast_si128(pt_0_register, key_10_register);
     pt_1_register = _mm_aesenclast_si128(pt_1_register, key_10_register);
@@ -267,8 +267,8 @@ pub unsafe fn encode_aes_ni_128_pipelined_x4(
 
 #[inline(always)]
 pub unsafe fn encode_aes_ni_128_pipelined_x8(
-  keys: [[u8; 16]; 11], 
-  plaintexts: [[u8; 16]; 8],
+  keys: &[[u8; 16]; 11],
+  plaintexts: &[[u8; 16]; 8],
   rounds: usize,
 ) -> [[u8; 16]; 8] {
 
@@ -387,7 +387,7 @@ pub unsafe fn encode_aes_ni_128_pipelined_x8(
     pt_5_register = _mm_aesenc_si128(pt_5_register, key_9_register);
     pt_6_register = _mm_aesenc_si128(pt_6_register, key_9_register);
     pt_7_register = _mm_aesenc_si128(pt_7_register, key_9_register);
-    
+
     // encode final round with last key
     pt_0_register = _mm_aesenclast_si128(pt_0_register, key_10_register);
     pt_1_register = _mm_aesenclast_si128(pt_1_register, key_10_register);
@@ -398,7 +398,7 @@ pub unsafe fn encode_aes_ni_128_pipelined_x8(
     pt_6_register = _mm_aesenclast_si128(pt_6_register, key_10_register);
     pt_7_register = _mm_aesenclast_si128(pt_7_register, key_10_register);
   }
- 
+
   // init memory for ciphertexts
   let mut ciphertext_0 = [0u8; 16];
   let mut ciphertext_1 = [0u8; 16];
@@ -434,8 +434,8 @@ pub unsafe fn encode_aes_ni_128_pipelined_x8(
 
 #[inline(always)]
 pub unsafe fn encode_aes_ni_c_128(
-  keys: [u8; 176],
-  plaintext: [u8; 16],
+  keys: &[u8; 176],
+  plaintext: &[u8; 16],
   rounds: usize,
 ) -> [u8; 16] {
   let mut output = [0u8; 16];
@@ -445,8 +445,8 @@ pub unsafe fn encode_aes_ni_c_128(
 
 #[inline(always)]
 pub unsafe fn encode_vaes_ni_c_512(
-  keys: [u8; 176],
-  plaintext: [u8; 64],
+  keys: &[u8; 176],
+  plaintext: &[u8; 64],
   rounds: usize,
 ) -> [u8; 64] {
   let mut output = [0u8; 64];
@@ -456,8 +456,8 @@ pub unsafe fn encode_vaes_ni_c_512(
 
 #[inline(always)]
 pub unsafe fn encode_vaes_ni_c_512_x3(
-  keys: [u8; 176],
-  plaintext: [u8; 192],
+  keys: &[u8; 176],
+  plaintext: &[u8; 192],
   rounds: usize,
 ) -> [[u8; 64]; 3] {
   let mut output_0 = [0u8; 64];

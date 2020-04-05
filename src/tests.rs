@@ -1,12 +1,12 @@
 #[cfg(test)]
 mod tests {
-  // given a known key and input, ensure all encoders and decoders match 
+  // given a known key and input, ensure all encoders and decoders match
 
   // One key that may be used for AES-128
-  const KEY: [u8; 16] = [ 
-    0x2B, 0x7E, 0x15, 0x16, 
-    0x28, 0xAE, 0xD2, 0xA6, 
-    0xAB, 0xF7, 0x15, 0x88, 
+  const KEY: [u8; 16] = [
+    0x2B, 0x7E, 0x15, 0x16,
+    0x28, 0xAE, 0xD2, 0xA6,
+    0xAB, 0xF7, 0x15, 0x88,
     0x09, 0xCF, 0x4F, 0x3C
   ];
 
@@ -159,7 +159,7 @@ mod tests {
     let mut scheduled_keys: [u32; 44] = [0; 44];
     let mut ct_output: [u8; 16] = [0; 16];
     let mut pt_output: [u8; 16] = [0; 16];
-    
+
     // test encode
     setkey_enc_k128(&KEY, &mut scheduled_keys);
     block_enc_k128(&INPUTS[0], &mut ct_output, &scheduled_keys);
@@ -181,7 +181,7 @@ mod tests {
     let mut block = GenericArray::clone_from_slice(&INPUTS[0]);
     let cipher = aes_soft::Aes128::new(&test_key);
     let block_copy = block.clone();
-    
+
     // test encode
     cipher.encrypt_block(&mut block);
     let expected_output = GenericArray::clone_from_slice(&EXPECTED_OUTPUTS[0]);
@@ -240,11 +240,11 @@ mod tests {
   fn test_aes_ni() {
 
     // test encode
-    let block = unsafe { encode_aes_ni_128(EXPANDED_KEYS, INPUTS[0], 1)};
+    let block = unsafe { encode_aes_ni_128(&EXPANDED_KEYS, &INPUTS[0], 1)};
     assert_eq!(block, EXPECTED_OUTPUTS[0]);
 
     // test decode
-    let decoded_block = unsafe { decode_aes_ni_128(EXPANDED_KEYS, block, 1) };
+    let decoded_block = unsafe { decode_aes_ni_128(&EXPANDED_KEYS, &block, 1) };
     assert_eq!(decoded_block, INPUTS[0]);
   }
 
@@ -255,19 +255,19 @@ mod tests {
     // test encode
     let blocks = unsafe {
        encode_aes_ni_128_pipelined_x4(
-         EXPANDED_KEYS, 
-         [INPUTS[0], 
-         INPUTS[1], 
-         INPUTS[2], 
+         &EXPANDED_KEYS,
+         &[INPUTS[0],
+         INPUTS[1],
+         INPUTS[2],
          INPUTS[3]],
          1
         )
       };
 
     assert_eq!(blocks, [
-      EXPECTED_OUTPUTS[0], 
-      EXPECTED_OUTPUTS[1], 
-      EXPECTED_OUTPUTS[2], 
+      EXPECTED_OUTPUTS[0],
+      EXPECTED_OUTPUTS[1],
+      EXPECTED_OUTPUTS[2],
       EXPECTED_OUTPUTS[3]
     ]);
   }
@@ -278,10 +278,10 @@ mod tests {
     // test encode
     let blocks = unsafe {
       encode_aes_ni_128_pipelined_x8(
-        EXPANDED_KEYS, 
-        [INPUTS[0], 
-        INPUTS[1], 
-        INPUTS[2], 
+        &EXPANDED_KEYS,
+        &[INPUTS[0],
+        INPUTS[1],
+        INPUTS[2],
         INPUTS[3],
         INPUTS[4],
         INPUTS[5],
@@ -292,13 +292,13 @@ mod tests {
      };
 
    assert_eq!(blocks, [
-     EXPECTED_OUTPUTS[0], 
-     EXPECTED_OUTPUTS[1], 
-     EXPECTED_OUTPUTS[2], 
+     EXPECTED_OUTPUTS[0],
+     EXPECTED_OUTPUTS[1],
+     EXPECTED_OUTPUTS[2],
      EXPECTED_OUTPUTS[3],
-     EXPECTED_OUTPUTS[4], 
-     EXPECTED_OUTPUTS[5], 
-     EXPECTED_OUTPUTS[6], 
+     EXPECTED_OUTPUTS[4],
+     EXPECTED_OUTPUTS[5],
+     EXPECTED_OUTPUTS[6],
      EXPECTED_OUTPUTS[7]
    ]);
   }
@@ -307,7 +307,7 @@ mod tests {
   /// Test VAES with 16 blocks pipelined in parallel (best effective throughput on Ice Lake)
   fn test_aes_ni_c() {
     // test encode
-    let block = unsafe { encode_aes_ni_c_128(FLAT_KEYS, INPUTS[0], 1)};
+    let block = unsafe { encode_aes_ni_c_128(&FLAT_KEYS, &INPUTS[0], 1)};
     assert_eq!(block, EXPECTED_OUTPUTS[0]);
   }
 
@@ -316,14 +316,14 @@ mod tests {
   /// Test VAES with 16 blocks pipelined in parallel (best effective throughput on Ice Lake)
   fn test_vaes_ni_c() {
     // test encode
-    let block = unsafe { encode_vaes_ni_c_512(FLAT_KEYS, FOUR_FLAT_INPUTS, 1)};
+    let block = unsafe { encode_vaes_ni_c_512(&FLAT_KEYS, &FOUR_FLAT_INPUTS, 1)};
     assert!(block.iter().zip(FLAT_EXPECTED_OUTPUTS[0..64].iter()).all(|(a,b)| a == b));
   }
 
   #[test]
   fn test_vaes_ni_c_x4() {
     // test encode
-    let blocks = unsafe { encode_vaes_ni_c_512_x3(FLAT_KEYS, TWELVE_FLAT_INPUTS, 1)};
+    let blocks = unsafe { encode_vaes_ni_c_512_x3(&FLAT_KEYS, &TWELVE_FLAT_INPUTS, 1)};
     for (index, block) in blocks.iter().enumerate() {
       assert!(block.iter().zip(FLAT_EXPECTED_OUTPUTS[index * 64..(index + 1) * 64].iter()).all(|(a,b)| a == b));
     }
